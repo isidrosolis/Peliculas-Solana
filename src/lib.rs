@@ -202,7 +202,7 @@ pub struct Actor {
 
 // Creacion de los contextos para las instrucciones (funciones)
 #[derive(Accounts)] // Especifica que este struct describe las cuentas que se requieren para determinada instruccion
-pub struct NuevaPelicula<'info> { // contexto de la instruccion
+pub struct NuevaFilmoteca<'info> { // contexto de la instruccion
     #[account(mut)] 
     pub owner: Signer<'info>, // Se define que el owner como el que pagara la transaccion, por eso es mut, para que cambie el balance de la cuenta
 
