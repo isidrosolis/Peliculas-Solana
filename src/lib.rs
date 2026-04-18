@@ -31,7 +31,7 @@ pub mod filomoteca {
         let peliculas: Vec<Pelicula> = Vec::new(); // Crea un vector vacio 
 
         // Creamos un Struct de tipo biblioteca y lo guardamos directamente 
-        context.accounts.biblioteca.set_inner(Filmoteca { 
+        context.accounts.filmoteca.set_inner(Filmoteca { 
             owner: owner_id,
             nombre,
             peliculas,
