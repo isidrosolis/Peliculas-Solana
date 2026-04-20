@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 // ID del Solana Program, este espacio se llena automaticamente al hacer el "build"
-declare_id!("");
+declare_id!("9irDsh3N1tZCfiiG3eWaFczgocLCEGNEHh9jvzcFoc6a");
 
 #[program] // Macro que convierte codigo de Rust a Solana. Apartir de aqui empieza tu codigo!
 pub mod filomoteca {
@@ -22,7 +22,7 @@ pub mod filomoteca {
     Parametros de entrada:
         * nombre -> nombre de la Filmoteca -> tipo string
      */
-    pub fn crear_filmoteca(context: Context<NuevaPelicula>, nombre: String) -> Result<()> {
+    pub fn crear_filmoteca(context: Context<NuevaFilmoteca>, nombre: String) -> Result<()> {
         // "Context" siempre suele ir como primer parametro, ya que permite acceder al objeto o cuenta con el que queremos interactuar
         // Dentro del context va al tipo de objeto o cuenta con el que deseamos interactuar. 
         let owner_id = context.accounts.owner.key(); // Accedemos al wallet address del caller 
@@ -30,7 +30,7 @@ pub mod filomoteca {
 
         let peliculas: Vec<Pelicula> = Vec::new(); // Crea un vector vacio 
 
-        // Creamos un Struct de tipo biblioteca y lo guardamos directamente 
+        // Creamos un Struct de tipo filmoteca y lo guardamos directamente 
         context.accounts.filmoteca.set_inner(Filmoteca { 
             owner: owner_id,
             nombre,
@@ -57,10 +57,15 @@ pub mod filomoteca {
             Errores::NoEresElOwner // Codigo de error, ver enum Errores
         ); 
 
+        require!( // Validacion para no exceder el tamaño maximo del vector
+            context.accounts.filmoteca.peliculas.len() < 10,
+            Errores::CapacidadMaxima
+        );
+
         let pelicula= Pelicula { // Creacion de un struct tipo Pelicula
             nombre,
             minutos,
-            actores,
+            actores, // Se usa correctamente el parametro recibido
             disponible: true,
         };
 
@@ -76,39 +81,39 @@ pub mod filomoteca {
     Parametros de entrada:
         * nombre -> Nombre de la  pelicula -> string
      */
-    pub fn eliminar_libro(context: Context<NuevoLibro>, nombre: String) -> Result<()> {
+    pub fn eliminar_pelicula(context: Context<NuevaPelicula>, nombre: String) -> Result<()> {
         require!( // Medida de seguridad
-            context.accounts.biblioteca.owner == context.accounts.owner.key(),
+            context.accounts.filmoteca.owner == context.accounts.owner.key(),
             Errores::NoEresElOwner
         );
 
-        let libros = &mut context.accounts.biblioteca.libros; // Referencia mutable al vector de libros
+        let peliculas = &mut context.accounts.filmoteca.peliculas; // Referencia mutable al vector de peliculas
 
-        for i in 0..libros.len() { // Se itera mediante el indice todo el contenido del vector en busca del libro a eliminar
-            if libros[i].nombre == nombre { // Si lo encuentra prodece a borrarlo mediante el metodo remove
-                libros.remove(i);
-                msg!("Libro {} eliminado!", nombre); // Mensaje de borrado exitoso
+        for i in 0..peliculas.len() { // Se itera mediante el indice todo el contenido del vector en busca la película a eliminar
+            if peliculas[i].nombre == nombre { // Si lo encuentra prodece a borrarlo mediante el metodo remove
+                peliculas.remove(i);
+                msg!("Pelicula {} eliminada!", nombre); // Mensaje de borrado exitoso
                 return Ok(()); // Transaccion exitosa
             }
         }
-        Err(Errores::LibroNoExiste.into()) // Transaccion fallida, nunca encontro el libro
+        Err(Errores::PeliculaNoExiste.into()) // Transaccion fallida, nunca encontro la película
     }
 
-    //////////////////////////// Instruccion: Ver Libros /////////////////////////////////////
+    //////////////////////////// Instruccion: Ver Peliculas /////////////////////////////////////
     /*
-    Muestra en el log de la transaccion el contenido completo del vector de libros de la Biblioteca
+    Muestra en el log de la transaccion el contenido completo del vector de Peliculas de la Filmoteca
 
     Parametros de entrada:
         Ninguno
      */
-    pub fn ver_libros(context: Context<NuevoLibro>) -> Result<()> {
+    pub fn ver_peliculas(context: Context<NuevaPelicula>) -> Result<()> {
         require!( // Medida de seguridad 
-            context.accounts.biblioteca.owner == context.accounts.owner.key(),
+            context.accounts.filmoteca.owner == context.accounts.owner.key(),
             Errores::NoEresElOwner
         );
 
-        // :#? requiere que NuevoLibro tenga atributo Debug. Permite la visualizacion completa del vector en el log
-        msg!("La lista de libros actualmente es: {:#?}", context.accounts.biblioteca.libros); // Print en log
+        // :#? requiere que NuevaPelicula tenga atributo Debug. Permite la visualizacion completa del vector en el log
+        msg!("La lista de peliculas actualmente es: {:#?}", context.accounts.filmoteca.peliculas); // Print en log
         Ok(()) // Transaccion exitosa 
     }
 
@@ -118,27 +123,27 @@ pub mod filomoteca {
     Cambia el estado de disponible de false a true o de true a false.
 
     Parametros de entrada:
-        * nombre -> Nombre del libro -> string
+        * nombre -> Nombre de la pelicula -> string
      */
-    pub fn alternar_estado(context: Context<NuevoLibro>, nombre: String) -> Result<()> {
+    pub fn alternar_estado(context: Context<NuevaPelicula>, nombre:String) -> Result<()> {
         require!( // Medida de seguridad
-            context.accounts.biblioteca.owner == context.accounts.owner.key(),
+            context.accounts.filmoteca.owner == context.accounts.owner.key(),
             Errores::NoEresElOwner
         );
 
-        let libros = &mut context.accounts.biblioteca.libros; // Referencia mutable al vector de libros
-        for i in 0..libros.len() { // Se itera mediante el indice el vector de libros
-            let estado = libros[i].disponible;  // Se almacena el estado del vector actual
+        let peliculas = &mut context.accounts.filmoteca.peliculas; // Referencia mutable al vector de peliculas
+        for i in 0..peliculas.len() { // Se itera mediante el indice el vector de peliculas
+            let estado = peliculas[i].disponible;  // Se almacena el estado del vector actual
 
-            if libros[i].nombre == nombre { // Si ecuentra el nombre del libro procede a cambiar el valor del estado 
+            if peliculas[i].nombre == nombre { // Si ecuentra el nombre de la pelicula procede a cambiar el valor del estado 
                 let nuevo_estado = !estado;
-                libros[i].disponible = nuevo_estado;
-                msg!("El libro: {} ahora tiene un valor de disponibilidad: {}", nombre, nuevo_estado); // log print de la nueva disponibilidad
+                peliculas[i].disponible = nuevo_estado;
+                msg!("La pelicula: {} ahora tiene un valor de disponibilidad: {}", nombre, nuevo_estado); // log print de la nueva disponibilidad
                 return Ok(()); // Transaccion exitosa
             }
         }
 
-        Err(Errores::LibroNoExiste.into()) // Transaccion fallida, libro no existe
+        Err(Errores::PeliculaNoExiste.into()) // Transaccion fallida, la película no existe
     }
 
 }
@@ -154,19 +159,21 @@ pub enum Errores {
     #[msg("Error, no eres el propietario de la filmoteca que deseas modificar")]
     NoEresElOwner,
     #[msg("Error, la pelicula con el que deseas interactuar no existe")]
-    LibroNoExiste,
+    PeliculaNoExiste,
+    #[msg("Error, se alcanzo el limite maximo de peliculas")]
+    CapacidadMaxima,
 }
 
 #[account] // Especifica que el struct es una cuenta que se almacenara en la blockchain
 #[derive(InitSpace)] // Genera la constante INIT_SPACE y determina el espacio de almacenamiento necesario 
 pub struct Filmoteca { // Define la Filmoteca
-    owner: Pubkey, // Pubkey es un formato de llave publica de 32 bytes 
+    pub owner: Pubkey, // Pubkey es un formato de llave publica de 32 bytes 
 
     #[max_len(60)] // Cantidad máxima de caracteres del string: nombre
-    nombre: String,
+    pub nombre: String,
 
     #[max_len(10)] // Tamaño maximo del vector peliculas 
-    peliculas: Vec<Pelicula>,
+    pub peliculas: Vec<Pelicula>,
 }
 
 /*
@@ -181,22 +188,23 @@ Struct interno o secundario (No es una cuenta). Se define por derive y cuenta co
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace, PartialEq, Debug)]
 pub struct Pelicula {
     #[max_len(60)]
-    nombre: String,
+    pub nombre: String,
 
-    // Los siguientes datos no rquieren de max_len porque ya estan definidos (numero de 16 bits y false o true)
-    minutos: u8, 
+    // Los siguientes datos no rquieren de max_len porque ya estan definidos (numero de 8 bits y false o true)
+    pub minutos: u8, 
 
     #[max_len(10)] // Tamaño maximo del vector actores que actuan en la pelicula
-    actores: Vec<Actor>,
+    pub actores: Vec<Actor>,
 
-    disponible: bool,
+    // Si la pelicula esta disponible
+    pub disponible: bool,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace, PartialEq, Debug)]
 pub struct Actor {
     // El nombre del actor de la pelicula
     #[max_len(50)]
-    nombre: String,
+    pub nombre: String,
 
 }
 
@@ -224,6 +232,10 @@ pub struct NuevaFilmoteca<'info> { // contexto de la instruccion
 pub struct NuevaPelicula<'info> {
     pub owner: Signer<'info>, // El owner de la cuenta es quien paga la transaccion
 
-    #[account(mut)] 
+    #[account(
+        mut,
+        seeds = [b"filmoteca", owner.key().as_ref()],
+        bump
+    )] 
     pub filmoteca: Account<'info, Filmoteca>, // Se marca filmoteca como mutable porque se modificara tanto el vector como los peliculas que contiene
 }
